@@ -20,7 +20,7 @@ type CoreConfig struct {
 
 type BackupSpec struct {
 	Crontab      string           `yaml:"crontab"`
-	Duration     string           `yaml:"duration"`
+	Interval     string           `yaml:"interval"`
 	Repositories []RepositorySpec `yaml:"repositories"`
 	Retention    RetentionPolicy  `yaml:"retention"`
 
@@ -78,8 +78,8 @@ func LoadSpec(filePath string) (*BackupDefinition, error) {
 		return nil, fmt.Errorf("at least one repository is required")
 	}
 
-	if backupSpec.Crontab == "" && backupSpec.Duration == "" {
-		return nil, fmt.Errorf("at least one schedule timing (crontab or duration) is required")
+	if backupSpec.Crontab == "" && backupSpec.Interval == "" {
+		return nil, fmt.Errorf("at least one schedule timing (crontab or interval) is required")
 	}
 
 	if backupSpec.MariaDB == nil && backupSpec.Directory == nil && backupSpec.Volumes == nil {
@@ -88,13 +88,13 @@ func LoadSpec(filePath string) (*BackupDefinition, error) {
 
 	var scheduleTimer gocron.JobDefinition
 
-	if backupSpec.Duration != "" {
-		d, err := helper.ParseDuration(backupSpec.Duration)
+	if backupSpec.Interval != "" {
+		d, err := helper.ParseInterval(backupSpec.Interval)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing duration")
+			return nil, fmt.Errorf("failed parsing interval")
 		}
 
-		scheduleTimer = gocron.DurationJob(d)
+		scheduleTimer = gocron.IntervalJob(d)
 	}
 
 	if backupSpec.Crontab != "" {
