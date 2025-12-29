@@ -14,15 +14,17 @@ import (
 )
 
 type CoreConfig struct {
-	S3      map[string]engines.S3Config `yaml:"s3"`
-	MariaDB engines.MariaDBDumpConfig   `yaml:"mariadb"`
+	S3            map[string]engines.S3Config `yaml:"s3"`
+	MariaDB       engines.MariaDBDumpConfig   `yaml:"mariadb"`
+	EncryptionKey string                      `yaml:"encryption_key"`
 }
 
 type BackupSpec struct {
-	Crontab      string           `yaml:"crontab"`
-	Interval     string           `yaml:"interval"`
-	Repositories []RepositorySpec `yaml:"repositories"`
-	Retention    RetentionPolicy  `yaml:"retention"`
+	Crontab       string           `yaml:"crontab"`
+	Interval      string           `yaml:"interval"`
+	Repositories  []RepositorySpec `yaml:"repositories"`
+	Retention     RetentionPolicy  `yaml:"retention"`
+	EncryptionKey string           `yaml:"encryption_key"`
 
 	// Drivers
 	MariaDB   []drivers.MariaDriver     `yaml:"mariadb"`
@@ -47,6 +49,7 @@ type BackupDefinition struct {
 	MariaDB       []drivers.MariaDriver
 	Directory     []drivers.DirectoryDriver
 	Volumes       []drivers.VolumeDriver
+	EncryptionKey string
 }
 
 func LoadConfig(filePath string) (*CoreConfig, error) {
@@ -94,7 +97,7 @@ func LoadSpec(filePath string) (*BackupDefinition, error) {
 			return nil, fmt.Errorf("failed parsing interval")
 		}
 
-		scheduleTimer = gocron.IntervalJob(d)
+		scheduleTimer = gocron.DurationJob(d)
 	}
 
 	if backupSpec.Crontab != "" {
@@ -108,6 +111,7 @@ func LoadSpec(filePath string) (*BackupDefinition, error) {
 		MariaDB:       backupSpec.MariaDB,
 		Directory:     backupSpec.Directory,
 		Volumes:       backupSpec.Volumes,
+		EncryptionKey: backupSpec.EncryptionKey,
 	}
 	return definition, nil
 }

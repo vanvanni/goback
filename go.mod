@@ -12,6 +12,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/walle/targz v0.0.0-20140417120357-57fe4206da5a
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
+	golang.org/x/crypto v0.46.0
 )
 
 require (

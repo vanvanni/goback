@@ -12,13 +12,14 @@ import (
 )
 
 type App struct {
-	scheduler     gocron.Scheduler
-	repositories  map[string]*engines.S3
-	mariadbConfig engines.MariaDBDumpConfig
-	engines       map[string]engines.Engine
-	docker        *engines.Docker
-	dump          *engines.Dump
-	backups       []BackupTask
+	scheduler           gocron.Scheduler
+	repositories        map[string]*engines.S3
+	mariadbConfig       engines.MariaDBDumpConfig
+	engines             map[string]engines.Engine
+	docker              *engines.Docker
+	dump                *engines.Dump
+	backups             []BackupTask
+	globalEncryptionKey string
 }
 
 var a *App
@@ -89,6 +90,7 @@ func (a *App) RegisterConf(conf *spec.CoreConfig) {
 	}
 
 	a.mariadbConfig = conf.MariaDB
+	a.globalEncryptionKey = conf.EncryptionKey
 	logging.Log.Info().Msg("MariaDB configuration added")
 }
 
@@ -118,16 +120,17 @@ func (a *App) RegisterDef(definition *spec.BackupDefinition) {
 	}
 
 	backupTask := BackupTask{
-		Definition:    definition,
-		MariaDB:       definition.MariaDB,
-		Directory:     definition.Directory,
-		Volumes:       definition.Volumes,
-		Repositories:  definition.Repositories,
-		Retention:     definition.Retention,
-		MariaDBConfig: a.mariadbConfig,
-		docker:        a.docker,
-		dump:          a.dump,
-		engines:       a.engines,
+		Definition:          definition,
+		MariaDB:             definition.MariaDB,
+		Directory:           definition.Directory,
+		Volumes:             definition.Volumes,
+		Repositories:        definition.Repositories,
+		Retention:           definition.Retention,
+		MariaDBConfig:       a.mariadbConfig,
+		docker:              a.docker,
+		dump:                a.dump,
+		engines:             a.engines,
+		GlobalEncryptionKey: a.globalEncryptionKey,
 	}
 
 	_, err := a.scheduler.NewJob(

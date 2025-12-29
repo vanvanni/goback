@@ -11,19 +11,21 @@ import (
 
 	"github.com/vanvanni/goback/internal/drivers"
 	"github.com/vanvanni/goback/internal/engines"
+	"github.com/vanvanni/goback/internal/helper"
 	"github.com/vanvanni/goback/internal/logging"
 	"github.com/vanvanni/goback/internal/spec"
 	"github.com/walle/targz"
 )
 
 type BackupTask struct {
-	Definition    *spec.BackupDefinition
-	MariaDB       []drivers.MariaDriver
-	Directory     []drivers.DirectoryDriver
-	Volumes       []drivers.VolumeDriver
-	Repositories  []spec.RepositorySpec
-	Retention     spec.RetentionPolicy
-	MariaDBConfig engines.MariaDBDumpConfig
+	Definition          *spec.BackupDefinition
+	MariaDB             []drivers.MariaDriver
+	Directory           []drivers.DirectoryDriver
+	Volumes             []drivers.VolumeDriver
+	Repositories        []spec.RepositorySpec
+	Retention           spec.RetentionPolicy
+	MariaDBConfig       engines.MariaDBDumpConfig
+	GlobalEncryptionKey string
 
 	// Engines
 	docker  *engines.Docker
@@ -119,6 +121,24 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 
 	if err := targz.Compress(workDir, finalArchive); err != nil {
 		return "", fmt.Errorf("failed to create final archive: %w", err)
+	}
+
+	encryptionKey := bt.GlobalEncryptionKey
+	if bt.Definition.EncryptionKey != "" {
+		encryptionKey = bt.Definition.EncryptionKey
+	}
+
+	if encryptionKey != "" {
+		encryptedArchive := finalArchive + ".enc"
+		logging.Log.Info().Str("archive", finalArchive).Msg("Encrypting archive")
+		if err := helper.EncryptFile(finalArchive, encryptedArchive, encryptionKey); err != nil {
+			return "", fmt.Errorf("failed to encrypt archive: %w", err)
+		}
+		// Removing the unencrypted archive
+		if err := os.Remove(finalArchive); err != nil {
+			logging.Log.Warn().Err(err).Msg("Failed to remove unencrypted archive")
+		}
+		finalArchive = encryptedArchive
 	}
 
 	for _, repo := range bt.Repositories {
