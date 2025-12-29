@@ -15,12 +15,13 @@ import (
 )
 
 type S3Config struct {
-	Bucket         string `toml:"bucket" yaml:"bucket"`
-	Region         string `toml:"region" yaml:"region"`
-	AccessKey      string `toml:"access_key" yaml:"access_key"`
-	SecretKey      string `toml:"secret_key" yaml:"secret_key"`
-	Endpoint       string `toml:"endpoint" yaml:"endpoint"`
-	ForcePathStyle bool   `toml:"force-path" yaml:"force-path"`
+	Bucket            string `toml:"bucket" yaml:"bucket"`
+	Region            string `toml:"region" yaml:"region"`
+	AccessKey         string `toml:"access_key" yaml:"access_key"`
+	SecretKey         string `toml:"secret_key" yaml:"secret_key"`
+	Endpoint          string `toml:"endpoint" yaml:"endpoint"`
+	ForcePathStyle    bool   `toml:"force-path" yaml:"force-path"`
+	HostnameImmutable bool   `toml:"hostname-immutable" yaml:"hostname-immutable"`
 }
 
 type S3 struct {
@@ -46,7 +47,7 @@ func NewClient(ctx context.Context, s3Config S3Config) (*S3, error) {
 					return aws.Endpoint{
 						URL:               s3Config.Endpoint,
 						SigningRegion:     s3Config.Region,
-						HostnameImmutable: true,
+						HostnameImmutable: s3Config.HostnameImmutable,
 					}, nil
 				},
 			),

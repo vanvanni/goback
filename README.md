@@ -23,7 +23,6 @@ The following features are planned for future releases:
 *   **PostgreSQL Support**
 *   **MongoDB Support**
 *   **MySQL Support** (Currently use the MariaDB driver)
-*   **S3 Uploads**
 *   **CLI Commands**
 
 ## Installation (W.I.P)
