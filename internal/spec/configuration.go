@@ -94,7 +94,7 @@ func LoadSpec(filePath string) (*BackupDefinition, error) {
 			return nil, fmt.Errorf("failed parsing interval")
 		}
 
-		scheduleTimer = gocron.IntervalJob(d)
+		scheduleTimer = gocron.DurationJob(d)
 	}
 
 	if backupSpec.Crontab != "" {
