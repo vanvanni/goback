@@ -1,0 +1,41 @@
+# GoBack (W.I.P)
+
+GoBack was created out of the need for a simple, minimal, and easy-to-use backup solution. While many existing backup software options are powerful, they were often too complex to set up or didn't cover specific needs. GoBack aims to be a straightforward tool that can run as a system service and reliably do its job.
+
+It supports scheduling via Crontab expressions and durations, allowing for flexible backup intervals, such as every 57 seconds.
+
+**Current Status:** This project is a Work In Progress (W.I.P). Features are being developed and tested.
+
+## Features
+
+*   **Database Backups:** Support for MariaDB.
+*   **Volume Backups:** Backup Docker volumes and other mounted storage.
+*   **Directory Backups:** Simple file and directory backups.
+*   **Cloud Storage Integration:** Store backups on S3 compatible storage.
+*   **Compression:** Reduce backup size for efficient storage.
+*   **Flexible Scheduling:** Use Crontab expressions or durations for scheduling.
+
+## Roadmap
+
+The following features are planned for future releases:
+
+*   **Encryption:** Secure your backups with encryption.
+*   **PostgreSQL Support**
+*   **MongoDB Support**
+*   **MySQL Support** (Currently use the MariaDB driver)
+
+## Installation (W.I.P)
+
+Installation instructions will be provided once the project reaches a more stable state.
+
+## Usage (W.I.P)
+
+Usage examples and command-line interfaces will be documented as features mature.
+
+## Contributing
+
+We welcome contributions! Please check back later for detailed contribution guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
