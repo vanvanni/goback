@@ -30,14 +30,14 @@ The following features are planned for future releases:
 
 Installation instructions will be provided once the project reaches a more stable state.
 
+### Automated Installation
+
+### Manual Installation
+
 ## Usage (W.I.P)
 
 Usage examples and command-line interfaces will be documented as features mature.
 
-## Contributing
-
-We welcome contributions! Please check back later for detailed contribution guidelines.
-
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General **Public License v3.0** License - see the [LICENSE](LICENSE) file for details.
