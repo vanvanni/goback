@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,6 +119,34 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 
 	if err := targz.Compress(workDir, finalArchive); err != nil {
 		return "", fmt.Errorf("failed to create final archive: %w", err)
+	}
+
+	for _, repo := range bt.Repositories {
+		parts := strings.Split(repo.Source, ":")
+		if len(parts) != 2 {
+			logging.Log.Warn().Str("source", repo.Source).Msg("Invalid repository source format")
+			continue
+		}
+
+		if parts[0] == "s3" {
+			engine := bt.GetS3(parts[1])
+			if engine == nil {
+				logging.Log.Error().Str("repository", repo.Source).Msg("S3 engine not found for repository")
+				continue
+			}
+
+			logging.Log.Info().Str("repository", repo.Source).Msg("Uploading archive")
+			if err := engine.UploadFile(ctx, finalArchive, repo.Dest); err != nil {
+				return "", fmt.Errorf("failed to upload to %s: %w", repo.Source, err)
+			}
+
+			if bt.Retention.KeepLast > 0 {
+				logging.Log.Info().Str("repository", repo.Source).Int("keep", bt.Retention.KeepLast).Msg("Enforcing retention policy")
+				if err := engine.KeepMax(ctx, repo.Dest, bt.Retention.KeepLast); err != nil {
+					logging.Log.Error().Err(err).Str("repository", repo.Source).Msg("Failed to enforce retention policy")
+				}
+			}
+		}
 	}
 
 	return finalArchive, nil
