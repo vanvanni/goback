@@ -12,14 +12,22 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+const (
+	saltSize = 16
+)
+
 func EncryptFile(inputPath, outputPath, key string) error {
+	if key == "" {
+		return fmt.Errorf("encryption key is required")
+	}
+
 	plaintext, err := os.ReadFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read input file: %w", err)
 	}
 
 	// Generate a random salt
-	salt := make([]byte, 16)
+	salt := make([]byte, saltSize)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return fmt.Errorf("failed to generate salt: %w", err)
 	}
@@ -51,6 +59,49 @@ func EncryptFile(inputPath, outputPath, key string) error {
 
 	if err := os.WriteFile(outputPath, finalData, 0644); err != nil {
 		return fmt.Errorf("failed to write encrypted file: %w", err)
+	}
+
+	return nil
+}
+
+func DecryptFile(inputPath, outputPath, key string) error {
+	if key == "" {
+		return fmt.Errorf("decryption key is required")
+	}
+
+	encryptedData, err := os.ReadFile(inputPath)
+	if err != nil {
+		return fmt.Errorf("failed to read encrypted file: %w", err)
+	}
+	if len(encryptedData) < saltSize {
+		return fmt.Errorf("encrypted file is too short")
+	}
+
+	salt := encryptedData[:saltSize]
+	dk := pbkdf2.Key([]byte(key), salt, 4096, 32, sha256.New)
+	block, err := aes.NewCipher(dk)
+	if err != nil {
+		return fmt.Errorf("failed to create cipher: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	if len(encryptedData) < saltSize+gcm.NonceSize() {
+		return fmt.Errorf("encrypted file is too short")
+	}
+
+	nonce := encryptedData[saltSize : saltSize+gcm.NonceSize()]
+	ciphertext := encryptedData[saltSize+gcm.NonceSize():]
+
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt file: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, plaintext, 0644); err != nil {
+		return fmt.Errorf("failed to write decrypted file: %w", err)
 	}
 
 	return nil
