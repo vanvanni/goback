@@ -3,3 +3,6 @@ examples/goback
 
 # Used for testing (writer test)
 examples/docker-compose.yml
+
+# Goland
+.idea

@@ -13,17 +13,17 @@ It supports scheduling via Crontab expressions and intervals, allowing for flexi
 *   **Directory Backups:** Simple file and directory backups.
 *   **Cloud Storage Integration:** Store backups on S3 compatible storage.
 *   **Compression:** Reduce backup size for efficient storage.
+*   **Encryption / Decryption:** AES-GCM encryption during backup and CLI decryption support.
 *   **Flexible Scheduling:** Use Crontab expressions or intervals for scheduling.
+*   **CLI Commands:** Run the service with `goback start` and decrypt archives with `goback decrypt`.
 
 ## Roadmap
 
 The following features are planned for future releases:
 
-*   **Encryption:** Secure your backups with encryption.
 *   **PostgreSQL Support**
 *   **MongoDB Support**
 *   **MySQL Support** (Currently use the MariaDB driver)
-*   **CLI Commands**
 
 ## Installation (W.I.P)
 
@@ -33,9 +33,25 @@ Installation instructions will be provided once the project reaches a more stabl
 
 ### Manual Installation
 
-## Usage (W.I.P)
+## Usage
 
-Usage examples and command-line interfaces will be documented as features mature.
+Start GoBack:
+
+```bash
+goback start --dir /etc/goback
+```
+
+Decrypt an encrypted archive:
+
+```bash
+goback decrypt /path/to/backup.tar.gz.enc --key "your-key"
+```
+
+Or resolve key from config/spec:
+
+```bash
+goback decrypt /path/to/backup.tar.gz.enc my-spec.yml --dir /etc/goback
+```
 
 ## License
 
