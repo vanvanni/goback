@@ -1,4 +1,11 @@
-# GoBack (W.I.P)
+# GoBack
+[![Coverage](https://codecov.io/gh/vanvanni/goback/branch/develop/graph/badge.svg)](https://codecov.io/gh/vanvanni/goback)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vanvanni/goback)](https://goreportcard.com/report/github.com/vanvanni/goback)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/vanvanni/goback)](https://github.com/vanvanni/goback/blob/develop/go.mod)
+[![Stars](https://img.shields.io/github/stars/vanvanni/goback?style=social)](https://github.com/vanvanni/goback/stargazers)
+[![Forks](https://img.shields.io/github/forks/vanvanni/goback?style=social)](https://github.com/vanvanni/goback/network/members)
+[![License](https://img.shields.io/github/license/vanvanni/goback)](https://github.com/vanvanni/goback/blob/develop/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/vanvanni/goback)](https://github.com/vanvanni/goback/commits/develop)
 
 GoBack was created out of the need for a simple, minimal, and easy-to-use backup solution. While many existing backup software options are powerful, they were often too complex to set up or didn't cover specific needs. GoBack aims to be a straightforward tool that can run as a system service and reliably do its job.
 
