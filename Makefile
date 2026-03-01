@@ -1,4 +1,4 @@
 .PHONY: run
 
 run:
-	go run cmd/goback/main.go -dir /root/goback/examples/goback
+	go run cmd/cli/main.go start --dir ./examples/goback

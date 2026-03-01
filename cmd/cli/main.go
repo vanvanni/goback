@@ -44,7 +44,7 @@ var decryptCmd = &cobra.Command{
 			spec = args[1]
 		}
 
-		key, err := resolveDecryptKey(decryptKey, baseDir, spec)
+		key, err := resolveDecryptKey(decryptKey, decryptDir, spec)
 		if err != nil {
 			return err
 		}
@@ -64,6 +64,7 @@ var decryptCmd = &cobra.Command{
 }
 
 var baseDir string
+var decryptDir string
 var decryptKey string
 var decryptOutput string
 
@@ -75,7 +76,7 @@ func init() {
 	rootCmd.AddCommand(decryptCmd)
 	decryptCmd.Flags().StringVarP(&decryptKey, "key", "k", "", "decryption key")
 	decryptCmd.Flags().StringVarP(&decryptOutput, "output", "o", "", "decrypted output file")
-	decryptCmd.Flags().StringVarP(&baseDir, "dir", "d", "", "goback directory (used to resolve key from config/spec)")
+	decryptCmd.Flags().StringVarP(&decryptDir, "dir", "d", "", "goback directory (used to resolve key from config/spec)")
 }
 
 func main() {
@@ -129,18 +130,14 @@ func resolveDecryptKey(key, dir, specArg string) (string, error) {
 		return "", fmt.Errorf("missing decryption key: pass --key or provide --dir with configured encryption_key")
 	}
 
-	if err := spec.EnsureDirectoryStructure(dir); err != nil {
-		return "", fmt.Errorf("could not ensure base structure: %w", err)
-	}
-
-	conf, err := spec.LoadConfig(spec.GetCoreConfigPath())
+	conf, err := spec.LoadConfig(filepath.Join(dir, "config.yml"))
 	if err != nil {
 		return "", fmt.Errorf("could not load core configuration: %w", err)
 	}
 
 	resolvedKey := strings.TrimSpace(conf.EncryptionKey)
 	if specArg != "" {
-		specPath, err := resolveSpecPath(specArg)
+		specPath, err := resolveSpecPath(dir, specArg)
 		if err != nil {
 			return "", err
 		}
@@ -162,15 +159,16 @@ func resolveDecryptKey(key, dir, specArg string) (string, error) {
 	return resolvedKey, nil
 }
 
-func resolveSpecPath(specArg string) (string, error) {
+func resolveSpecPath(baseDir, specArg string) (string, error) {
+	specDir := filepath.Join(baseDir, "specs.d")
 	candidates := []string{}
 	if filepath.IsAbs(specArg) || strings.Contains(specArg, "/") || strings.Contains(specArg, "\\") {
 		candidates = append(candidates, specArg)
 	} else {
-		candidates = append(candidates, filepath.Join(spec.GetSpecDirectory(), specArg))
+		candidates = append(candidates, filepath.Join(specDir, specArg))
 		if filepath.Ext(specArg) == "" {
-			candidates = append(candidates, filepath.Join(spec.GetSpecDirectory(), specArg+".yml"))
-			candidates = append(candidates, filepath.Join(spec.GetSpecDirectory(), specArg+".yaml"))
+			candidates = append(candidates, filepath.Join(specDir, specArg+".yml"))
+			candidates = append(candidates, filepath.Join(specDir, specArg+".yaml"))
 		}
 	}
 
