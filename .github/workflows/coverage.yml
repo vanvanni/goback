@@ -1,0 +1,58 @@
+name: Test and Coverage
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests with coverage
+        run: go test ./... -covermode=atomic -coverprofile=coverage.out
+
+      - name: Generate coverage summary
+        shell: bash
+        run: |
+          go tool cover -func=coverage.out | tee coverage.txt
+          TOTAL="$(grep '^total:' coverage.txt | awk '{print $3}')"
+          {
+            echo "## Coverage Report"
+            echo ""
+            echo "- Total coverage: ${TOTAL}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.txt
+
+      - name: Upload to Codecov (optional)
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
