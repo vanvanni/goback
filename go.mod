@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.1
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/go-co-op/gocron/v2 v2.18.2
+	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/rs/zerolog v1.34.0
 	github.com/walle/targz v0.0.0-20140417120357-57fe4206da5a
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
