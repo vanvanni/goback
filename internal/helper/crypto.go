@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -21,7 +20,7 @@ func EncryptFile(inputPath, outputPath, key string) error {
 		return fmt.Errorf("encryption key is required")
 	}
 
-	plaintext, err := os.ReadFile(inputPath)
+	plaintext, err := ReadFileSafe(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read input file: %w", err)
 	}
@@ -57,7 +56,7 @@ func EncryptFile(inputPath, outputPath, key string) error {
 	finalData := append(salt, nonce...)
 	finalData = append(finalData, ciphertext...)
 
-	if err := os.WriteFile(outputPath, finalData, 0644); err != nil {
+	if err := WriteFileSafe(outputPath, finalData, 0600); err != nil {
 		return fmt.Errorf("failed to write encrypted file: %w", err)
 	}
 
@@ -69,7 +68,7 @@ func DecryptFile(inputPath, outputPath, key string) error {
 		return fmt.Errorf("decryption key is required")
 	}
 
-	encryptedData, err := os.ReadFile(inputPath)
+	encryptedData, err := ReadFileSafe(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read encrypted file: %w", err)
 	}
@@ -100,7 +99,7 @@ func DecryptFile(inputPath, outputPath, key string) error {
 		return fmt.Errorf("failed to decrypt file: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, plaintext, 0644); err != nil {
+	if err := WriteFileSafe(outputPath, plaintext, 0600); err != nil {
 		return fmt.Errorf("failed to write decrypted file: %w", err)
 	}
 

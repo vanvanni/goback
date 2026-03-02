@@ -4,12 +4,13 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
 
 func CompressDir(dir string, dest string) (err error) {
-	out, err := os.Create(dest)
+	out, err := OpenWriteOnlyFile(dest, 0600)
 	if err != nil {
 		return err
 	}
@@ -21,15 +22,21 @@ func CompressDir(dir string, dest string) (err error) {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	return fs.WalkDir(root.FS(), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if path == dir {
+		if path == "." {
 			return nil
 		}
 
-		rel, err := filepath.Rel(dir, path)
+		info, err := entry.Info()
 		if err != nil {
 			return err
 		}
@@ -38,20 +45,24 @@ func CompressDir(dir string, dest string) (err error) {
 		if err != nil {
 			return err
 		}
-		hdr.Name = filepath.ToSlash(rel)
+		hdr.Name = filepath.ToSlash(path)
 
 		if err := tw.WriteHeader(hdr); err != nil {
 			return err
 		}
 
 		if info.Mode().IsRegular() {
-			f, err := os.Open(path)
+			f, err := root.Open(path)
 			if err != nil {
 				return err
 			}
-			defer f.Close()
 
 			if _, err := io.Copy(tw, f); err != nil {
+				_ = f.Close()
+				return err
+			}
+
+			if err := f.Close(); err != nil {
 				return err
 			}
 		}
@@ -60,13 +71,13 @@ func CompressDir(dir string, dest string) (err error) {
 }
 
 func CompressFile(src string, dest string) error {
-	in, err := os.Open(src)
+	in, err := OpenReadOnlyFile(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 
-	out, err := os.Create(dest)
+	out, err := OpenWriteOnlyFile(dest, 0600)
 	if err != nil {
 		return err
 	}

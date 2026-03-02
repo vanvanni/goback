@@ -9,12 +9,12 @@ var base string
 
 func EnsureDirectoryStructure(basePath string) error {
 	base = basePath
-	if err := os.MkdirAll(GetSpecDirectory(), 0755); err != nil {
+	if err := os.MkdirAll(GetSpecDirectory(), 0750); err != nil {
 		return err
 	}
 
 	if _, err := os.Stat(GetCoreConfigPath()); os.IsNotExist(err) {
-		if err := os.WriteFile(GetCoreConfigPath(), []byte{}, 0644); err != nil {
+		if err := os.WriteFile(GetCoreConfigPath(), []byte{}, 0600); err != nil {
 			return err
 		}
 	}

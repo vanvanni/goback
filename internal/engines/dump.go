@@ -3,13 +3,18 @@ package engines
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
+	"regexp"
+	"strings"
+
+	"github.com/vanvanni/goback/internal/helper"
 )
 
 type Dump struct {
 	mariadbDumpPath string
 }
+
+var mariaDBIdentifierPattern = regexp.MustCompile(`^[a-zA-Z0-9_$-]+$`)
 
 func NewDump() (*Dump, error) {
 	path, err := exec.LookPath("mariadb-dump")
@@ -30,6 +35,17 @@ func (d *Dump) Kind() EngineKind {
 }
 
 func (d *Dump) DumpMariaDB(ctx context.Context, config MariaDBDumpConfig) (*exec.Cmd, error) {
+	database := strings.TrimSpace(config.Database)
+	if database == "" {
+		return nil, fmt.Errorf("database is required")
+	}
+	if strings.HasPrefix(database, "-") {
+		return nil, fmt.Errorf("invalid database name")
+	}
+	if !mariaDBIdentifierPattern.MatchString(database) {
+		return nil, fmt.Errorf("invalid database name")
+	}
+
 	args := []string{}
 
 	if config.Host != "" {
@@ -48,11 +64,12 @@ func (d *Dump) DumpMariaDB(ctx context.Context, config MariaDBDumpConfig) (*exec
 		args = append(args, "-p"+config.Password)
 	}
 
-	args = append(args, config.Database)
+	args = append(args, "--", database)
+	// #nosec G204 -- command path is discovered via LookPath, input is validated, and args are passed without a shell.
 	cmd := exec.CommandContext(ctx, d.mariadbDumpPath, args...)
 
 	if config.OutputFile != "" {
-		file, err := os.Create(config.OutputFile)
+		file, err := helper.OpenWriteOnlyFile(config.OutputFile, 0600)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create output file: %w", err)
 		}

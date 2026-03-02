@@ -53,7 +53,7 @@ type BackupDefinition struct {
 }
 
 func LoadConfig(filePath string) (*CoreConfig, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := helper.ReadFileSafe(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read core config file: %w", err)
 	}
@@ -67,7 +67,7 @@ func LoadConfig(filePath string) (*CoreConfig, error) {
 }
 
 func LoadSpec(filePath string) (*BackupDefinition, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := helper.ReadFileSafe(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read spec file: %w", err)
 	}

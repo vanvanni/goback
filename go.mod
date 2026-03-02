@@ -1,6 +1,6 @@
 module github.com/vanvanni/goback
 
-go 1.25.4
+go 1.25.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.0
@@ -9,7 +9,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/go-co-op/gocron/v2 v2.19.1
+	github.com/google/safeopen v0.0.0-20240125081138-66b54d5181c6
 	github.com/rs/zerolog v1.34.0
+	github.com/spf13/cobra v1.10.2
 	github.com/walle/targz v0.0.0-20140417120357-57fe4206da5a
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
 	golang.org/x/crypto v0.46.0
@@ -55,7 +57,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect

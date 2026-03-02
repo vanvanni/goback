@@ -3,7 +3,6 @@ package engines
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/vanvanni/goback/internal/helper"
 )
 
 type S3Config struct {
@@ -82,7 +82,7 @@ func NewClient(ctx context.Context, s3Config S3Config) (*S3, error) {
 }
 
 func (c *S3) UploadFile(ctx context.Context, s string, d string) error {
-	f, err := os.Open(s)
+	f, err := helper.OpenReadOnlyFile(s)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
