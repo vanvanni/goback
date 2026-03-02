@@ -71,7 +71,7 @@ jobs:
       - name: Run gosec and generate SARIF
         id: gosec_scan
         continue-on-error: true
-        run: gosec -exclude=G106 -fmt sarif -out gosec.sarif ./...
+        run: gosec -fmt sarif -out gosec.sarif ./...
 
       - name: Upload gosec SARIF
         if: ${{ always() && hashFiles('gosec.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
