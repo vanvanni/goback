@@ -91,6 +91,43 @@ func TestResolveDecryptKeyMissing(t *testing.T) {
 	}
 }
 
+func TestResolveDecryptKeyRequiresDirWhenNoExplicitKey(t *testing.T) {
+	_, err := resolveDecryptKey("", "", "")
+	if err == nil {
+		t.Fatal("expected error when dir is missing and key is not provided")
+	}
+	if !strings.Contains(err.Error(), "missing decryption key") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveDecryptKeySpecNotFound(t *testing.T) {
+	baseDir := t.TempDir()
+	writeConfig(t, baseDir, "global-key")
+
+	_, err := resolveDecryptKey("", baseDir, "does-not-exist")
+	if err == nil {
+		t.Fatal("expected error when spec does not exist")
+	}
+	if !strings.Contains(err.Error(), "was not found") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveDecryptKeyFallsBackToConfigWhenSpecHasNoKey(t *testing.T) {
+	baseDir := t.TempDir()
+	writeConfig(t, baseDir, "global-key")
+	writeValidSpec(t, baseDir, "daily.yml", "")
+
+	key, err := resolveDecryptKey("", baseDir, "daily.yml")
+	if err != nil {
+		t.Fatalf("resolveDecryptKey failed: %v", err)
+	}
+	if key != "global-key" {
+		t.Fatalf("expected fallback to config key, got %q", key)
+	}
+}
+
 func writeConfig(t *testing.T, baseDir, key string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(baseDir, "specs.d"), 0755); err != nil {
