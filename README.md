@@ -13,6 +13,8 @@ It supports scheduling via Crontab expressions and intervals, allowing for flexi
 
 **Current Status:** This project is a Work In Progress (W.I.P). Features are being developed and tested.
 
+**Disclaimer:** Most of the tests in this project were written with AI assistance, because the generated tests are generally better than the ones I write manually.
+
 ## Features
 
 *   **Database Backups:** Support for MariaDB.
