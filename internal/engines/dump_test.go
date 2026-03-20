@@ -41,6 +41,34 @@ func TestNewDumpFallsBackToMysqldump(t *testing.T) {
 	}
 }
 
+func TestResolveMariaDBClientPathFindsMariaDB(t *testing.T) {
+	binDir := t.TempDir()
+	createFakeBinary(t, binDir, "mariadb")
+	t.Setenv("PATH", binDir)
+
+	path, err := resolveMariaDBClientPath()
+	if err != nil {
+		t.Fatalf("expected resolveMariaDBClientPath to succeed, got error: %v", err)
+	}
+	if got := strings.ToLower(filepath.Base(path)); !strings.Contains(got, "mariadb") {
+		t.Fatalf("expected mariadb binary path, got %q", path)
+	}
+}
+
+func TestResolveMariaDBClientPathFallsBackToMySQL(t *testing.T) {
+	binDir := t.TempDir()
+	createFakeBinary(t, binDir, "mysql")
+	t.Setenv("PATH", binDir)
+
+	path, err := resolveMariaDBClientPath()
+	if err != nil {
+		t.Fatalf("expected resolveMariaDBClientPath to succeed, got error: %v", err)
+	}
+	if got := strings.ToLower(filepath.Base(path)); !strings.Contains(got, "mysql") {
+		t.Fatalf("expected mysql binary path, got %q", path)
+	}
+}
+
 func TestNewDumpReturnsErrorWhenNoBinaryExists(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
@@ -159,6 +187,60 @@ func TestDumpMariaDBReturnsErrorForInvalidOutputPath(t *testing.T) {
 	}
 }
 
+func TestRestoreMariaDBBuildsCommandAndInputFile(t *testing.T) {
+	inputFile := filepath.Join(t.TempDir(), "dump.sql")
+	if err := os.WriteFile(inputFile, []byte("select 1;"), 0644); err != nil {
+		t.Fatalf("failed to write input file: %v", err)
+	}
+
+	dump := &Dump{mariadbClientPath: "mysql"}
+	cmd, err := dump.RestoreMariaDB(context.Background(), MariaDBDumpConfig{
+		Host:     "db.local",
+		Port:     "3306",
+		User:     "alice",
+		Password: "secret",
+		Database: "app_db",
+	}, inputFile)
+	if err != nil {
+		t.Fatalf("RestoreMariaDB returned error: %v", err)
+	}
+
+	wantArgs := []string{"mysql", "-h", "db.local", "-P", "3306", "-u", "alice", "-psecret", "--", "app_db"}
+	if len(cmd.Args) != len(wantArgs) {
+		t.Fatalf("unexpected args length: got %d want %d (%v)", len(cmd.Args), len(wantArgs), cmd.Args)
+	}
+	for i := range wantArgs {
+		if cmd.Args[i] != wantArgs[i] {
+			t.Fatalf("unexpected arg at index %d: got %q want %q", i, cmd.Args[i], wantArgs[i])
+		}
+	}
+	if cmd.Stdin == nil {
+		t.Fatal("expected stdin to be redirected from input file")
+	}
+}
+
+func TestReplaceMariaDBBuildsCommand(t *testing.T) {
+	dump := &Dump{mariadbClientPath: "mysql"}
+	cmd, err := dump.ReplaceMariaDB(context.Background(), MariaDBDumpConfig{
+		Host:     "db.local",
+		User:     "alice",
+		Database: "app_db",
+	})
+	if err != nil {
+		t.Fatalf("ReplaceMariaDB returned error: %v", err)
+	}
+
+	wantArgs := []string{"mysql", "-h", "db.local", "-u", "alice", "-e", "DROP DATABASE IF EXISTS `app_db`; CREATE DATABASE `app_db`"}
+	if len(cmd.Args) != len(wantArgs) {
+		t.Fatalf("unexpected args length: got %d want %d (%v)", len(cmd.Args), len(wantArgs), cmd.Args)
+	}
+	for i := range wantArgs {
+		if cmd.Args[i] != wantArgs[i] {
+			t.Fatalf("unexpected arg at index %d: got %q want %q", i, cmd.Args[i], wantArgs[i])
+		}
+	}
+}
+
 func TestS3Kind(t *testing.T) {
 	if got := (&S3{}).Kind(); got != EngineKindS3 {
 		t.Fatalf("expected kind %q, got %q", EngineKindS3, got)
@@ -172,6 +254,17 @@ func TestS3UploadFileReturnsErrorWhenSourceMissing(t *testing.T) {
 		t.Fatal("expected error when source file does not exist")
 	}
 	if !strings.Contains(err.Error(), "failed to open file") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestS3DownloadFileReturnsErrorWhenTargetCannotBeCreated(t *testing.T) {
+	client := &S3{}
+	err := client.DownloadFile(context.Background(), "backups/archive.tar.gz", filepath.Join(t.TempDir(), "missing", "archive.tar.gz"))
+	if err == nil {
+		t.Fatal("expected error when target file parent does not exist")
+	}
+	if !strings.Contains(err.Error(), "failed to create local file") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

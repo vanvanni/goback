@@ -67,6 +67,7 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 
 	var wg sync.WaitGroup
 	errChan := make(chan error, 3)
+	itemChan := make(chan spec.BackupItem, len(bt.MariaDB)+len(bt.Directory)+len(bt.Volumes))
 
 	wg.Add(3)
 
@@ -77,6 +78,13 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 				errChan <- fmt.Errorf("failed to process mariadb backups: %w", err)
 				return
 			}
+			itemChan <- spec.BackupItem{
+				Type:           "mariadb",
+				Name:           db.Name,
+				ArchiveName:    "mariadb-" + db.Name + ".tar.gz",
+				OriginalTarget: db.Name,
+				Database:       db.Name,
+			}
 		}
 	}()
 
@@ -86,6 +94,13 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 			if err := dir.Backup(workDir); err != nil {
 				errChan <- fmt.Errorf("failed to process directory backups: %w", err)
 				return
+			}
+			itemChan <- spec.BackupItem{
+				Type:           "directory",
+				Name:           dir.Name,
+				ArchiveName:    "dir-" + dir.Name + ".tar.gz",
+				OriginalTarget: dir.Source,
+				SourcePath:     dir.Source,
 			}
 		}
 	}()
@@ -104,11 +119,19 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 				errChan <- fmt.Errorf("failed to process volume backups: %w", err)
 				return
 			}
+			itemChan <- spec.BackupItem{
+				Type:           "volume",
+				Name:           vol.Name,
+				ArchiveName:    "vol-" + vol.Name + ".tar.gz",
+				OriginalTarget: vol.Name,
+				VolumeName:     vol.Name,
+			}
 		}
 	}()
 
 	wg.Wait()
 	close(errChan)
+	close(itemChan)
 
 	for err := range errChan {
 		if err != nil {
@@ -116,17 +139,39 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 		}
 	}
 
+	items := make([]spec.BackupItem, 0, len(bt.MariaDB)+len(bt.Directory)+len(bt.Volumes))
+	for item := range itemChan {
+		items = append(items, item)
+	}
+
 	finalArchive := filepath.Join(os.TempDir(), fmt.Sprintf("backup-%s-%d.tar.gz",
 		bt.Definition.FileName, time.Now().Unix()))
+
+	manifest := &spec.BackupManifest{
+		ManifestVersion: spec.CurrentManifestVersion,
+		CreatedAt:       time.Now().UTC(),
+		SpecName:        bt.Definition.FileName,
+		Encryption: spec.BackupManifestEncryption{
+			Enabled: bt.resolveEncryptionKey() != "",
+		},
+		Repositories: bt.Repositories,
+		Items:        items,
+	}
+	if len(bt.Repositories) > 0 {
+		manifest.Repository = spec.BackupManifestRepository{
+			Source: bt.Repositories[0].Source,
+			Dest:   bt.Repositories[0].Dest,
+		}
+	}
+	if err := spec.SaveManifest(filepath.Join(workDir, "manifest.yml"), manifest); err != nil {
+		return "", fmt.Errorf("failed to write backup manifest: %w", err)
+	}
 
 	if err := targz.Compress(workDir, finalArchive); err != nil {
 		return "", fmt.Errorf("failed to create final archive: %w", err)
 	}
 
-	encryptionKey := bt.GlobalEncryptionKey
-	if bt.Definition.EncryptionKey != "" {
-		encryptionKey = bt.Definition.EncryptionKey
-	}
+	encryptionKey := bt.resolveEncryptionKey()
 
 	if encryptionKey != "" {
 		encryptedArchive := finalArchive + ".enc"
@@ -170,4 +215,12 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 	}
 
 	return finalArchive, nil
+}
+
+func (bt *BackupTask) resolveEncryptionKey() string {
+	if bt.Definition != nil && bt.Definition.EncryptionKey != "" {
+		return bt.Definition.EncryptionKey
+	}
+
+	return bt.GlobalEncryptionKey
 }
