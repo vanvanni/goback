@@ -23,8 +23,9 @@ It supports scheduling via Crontab expressions and intervals, allowing for flexi
 *   **Cloud Storage Integration:** Store backups on S3 compatible storage.
 *   **Compression:** Reduce backup size for efficient storage.
 *   **Encryption / Decryption:** AES-GCM encryption during backup and CLI decryption support.
+*   **Recovery:** Download remote backups and extract them into a local recovery directory.
 *   **Flexible Scheduling:** Use Crontab expressions or intervals for scheduling.
-*   **CLI Commands:** Run the service with `goback start` and decrypt archives with `goback decrypt`.
+*   **CLI Commands:** Run the service with `goback start`, decrypt archives with `goback decrypt`, and extract recovery bundles with `goback recover`.
 
 ## Roadmap
 
@@ -61,6 +62,25 @@ Or resolve key from config/spec:
 ```bash
 goback decrypt /path/to/backup.tar.gz.enc my-spec.yml --dir /etc/goback
 ```
+
+Recover a remote backup using a spec and extract it into a local directory:
+
+```bash
+goback recover backups/backup-daily.yml-1740000000.tar.gz.enc ./restore --spec daily.yml --dir /etc/goback
+```
+
+Recover a remote backup without a spec and extract it into a local directory:
+
+```bash
+goback recover backups/backup-daily.yml-1740000000.tar.gz.enc ./restore --source s3:main --dir /etc/goback --key "your-key"
+```
+
+Notes:
+
+*   `goback recover` currently downloads from configured remote repositories only.
+*   Recovery is intentionally simple in this early stage: it extracts items into `directory/`, `mariadb/`, and `volumes/` inside the target path and writes a `manifest.yml` beside them.
+*   The output path must be empty or not exist yet, which keeps recovery safe and predictable.
+*   New backups include an embedded `manifest.yml` that enables spec-less recovery. Older backups can still be recovered because item names are inferred from archive filenames.
 
 ## License
 

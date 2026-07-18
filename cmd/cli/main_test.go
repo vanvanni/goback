@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/vanvanni/goback/internal/spec"
 )
 
 func TestDefaultDecryptOutput(t *testing.T) {
@@ -125,6 +127,53 @@ func TestResolveDecryptKeyFallsBackToConfigWhenSpecHasNoKey(t *testing.T) {
 	}
 	if key != "global-key" {
 		t.Fatalf("expected fallback to config key, got %q", key)
+	}
+}
+
+func TestResolveRecoverRepository(t *testing.T) {
+	def := &spec.BackupDefinition{
+		Repositories: []spec.RepositorySpec{
+			{Source: "s3:main", Dest: "backups"},
+			{Source: "s3:secondary", Dest: "archive"},
+		},
+	}
+
+	repo, err := resolveRecoverRepository(def, "")
+	if err != nil {
+		t.Fatalf("resolveRecoverRepository default failed: %v", err)
+	}
+	if repo.Source != "s3:main" {
+		t.Fatalf("expected default repository source %q, got %q", "s3:main", repo.Source)
+	}
+
+	repo, err = resolveRecoverRepository(def, "s3:secondary")
+	if err != nil {
+		t.Fatalf("resolveRecoverRepository explicit failed: %v", err)
+	}
+	if repo.Dest != "archive" {
+		t.Fatalf("expected destination %q, got %q", "archive", repo.Dest)
+	}
+}
+
+func TestResolveRecoverRepositoryWithoutSpecRequiresSource(t *testing.T) {
+	_, err := resolveRecoverRepository(nil, "")
+	if err == nil {
+		t.Fatal("expected error when source is missing")
+	}
+	if !strings.Contains(err.Error(), "repository source is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveRecoveryRemoteKey(t *testing.T) {
+	repo := spec.RepositorySpec{Source: "s3:main", Dest: "backups"}
+
+	if got := resolveRecoveryRemoteKey(repo, "daily.tar.gz"); got != "backups/daily.tar.gz" {
+		t.Fatalf("expected joined remote key, got %q", got)
+	}
+
+	if got := resolveRecoveryRemoteKey(repo, "backups/daily.tar.gz"); got != "backups/daily.tar.gz" {
+		t.Fatalf("expected existing remote path unchanged, got %q", got)
 	}
 }
 

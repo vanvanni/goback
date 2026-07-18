@@ -3,6 +3,7 @@ package engines
 import (
 	"context"
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 
@@ -98,6 +99,29 @@ func (c *S3) UploadFile(ctx context.Context, s string, d string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file: %w", err)
+	}
+
+	return nil
+}
+
+func (c *S3) DownloadFile(ctx context.Context, remoteKey string, localPath string) error {
+	out, err := helper.OpenWriteOnlyFile(localPath, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to create local file: %w", err)
+	}
+	defer out.Close()
+
+	result, err := c.s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(remoteKey),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to download file: %w", err)
+	}
+	defer result.Body.Close()
+
+	if _, err := io.Copy(out, result.Body); err != nil {
+		return fmt.Errorf("failed to write local file: %w", err)
 	}
 
 	return nil

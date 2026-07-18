@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -63,10 +64,26 @@ var decryptCmd = &cobra.Command{
 	},
 }
 
+var recoverCmd = &cobra.Command{
+	Use:     "recover <backup> <path>",
+	Short:   "Download and extract a backup archive",
+	Example: "goback recover backups/backup-daily-123.tar.gz.enc ./restore --spec daily.yml --dir /etc/goback",
+	Args:    cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		backup := args[0]
+		outputPath := args[1]
+		return runRecover(cmd.Context(), backup, outputPath)
+	},
+}
+
 var baseDir string
 var decryptDir string
 var decryptKey string
 var decryptOutput string
+var recoverDir string
+var recoverSpec string
+var recoverKey string
+var recoverSource string
 
 func init() {
 	rootCmd.AddCommand(startCmd)
@@ -77,6 +94,13 @@ func init() {
 	decryptCmd.Flags().StringVarP(&decryptKey, "key", "k", "", "decryption key")
 	decryptCmd.Flags().StringVarP(&decryptOutput, "output", "o", "", "decrypted output file")
 	decryptCmd.Flags().StringVarP(&decryptDir, "dir", "d", "", "goback directory (used to resolve key from config/spec)")
+
+	rootCmd.AddCommand(recoverCmd)
+	recoverCmd.Flags().StringVarP(&recoverSpec, "spec", "s", "", "spec file used to resolve repository and key")
+	recoverCmd.Flags().StringVarP(&recoverDir, "dir", "d", "", "goback directory")
+	recoverCmd.Flags().StringVarP(&recoverKey, "key", "k", "", "decryption key")
+	recoverCmd.Flags().StringVar(&recoverSource, "source", "", "repository source selector, for example s3:main")
+	_ = recoverCmd.MarkFlagRequired("dir")
 }
 
 func main() {
@@ -157,6 +181,135 @@ func resolveDecryptKey(key, dir, specArg string) (string, error) {
 	}
 
 	return resolvedKey, nil
+}
+
+func runRecover(ctx context.Context, backup, outputPath string) error {
+	if strings.TrimSpace(recoverDir) == "" {
+		return fmt.Errorf("--dir is required")
+	}
+	if strings.TrimSpace(recoverSpec) == "" && strings.TrimSpace(recoverSource) == "" {
+		return fmt.Errorf("recover without --spec requires --source")
+	}
+
+	conf, err := loadCoreConfig(recoverDir)
+	if err != nil {
+		return err
+	}
+
+	def, err := loadOptionalSpec(recoverDir, recoverSpec)
+	if err != nil {
+		return err
+	}
+
+	repository, err := resolveRecoverRepository(def, recoverSource)
+	if err != nil {
+		return err
+	}
+
+	recoveryRuntime, err := app.CreateRecoveryRuntime(ctx, conf)
+	if err != nil {
+		return err
+	}
+
+	downloader, err := resolveRecoveryDownloader(recoveryRuntime, repository.Source)
+	if err != nil {
+		return err
+	}
+
+	decryptionKey := ""
+	if strings.HasSuffix(backup, ".enc") {
+		decryptionKey, err = resolveDecryptKey(recoverKey, recoverDir, recoverSpec)
+		if err != nil {
+			return err
+		}
+	}
+
+	task := &app.RecoveryTask{
+		RemoteKey:     resolveRecoveryRemoteKey(repository, backup),
+		OutputPath:    outputPath,
+		DecryptionKey: decryptionKey,
+		Downloader:    downloader,
+	}
+
+	_, err = task.Run(ctx)
+	return err
+}
+
+func loadCoreConfig(dir string) (*spec.CoreConfig, error) {
+	conf, err := spec.LoadConfig(filepath.Join(dir, "config.yml"))
+	if err != nil {
+		return nil, fmt.Errorf("could not load core configuration: %w", err)
+	}
+	return conf, nil
+}
+
+func loadOptionalSpec(dir, specArg string) (*spec.BackupDefinition, error) {
+	if strings.TrimSpace(specArg) == "" {
+		return nil, nil
+	}
+
+	specPath, err := resolveSpecPath(dir, specArg)
+	if err != nil {
+		return nil, err
+	}
+
+	def, err := spec.LoadSpec(specPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not load spec %q: %w", specPath, err)
+	}
+	def.FileName = filepath.Base(specPath)
+	return def, nil
+}
+
+func resolveRecoverRepository(def *spec.BackupDefinition, source string) (spec.RepositorySpec, error) {
+	if def == nil {
+		if strings.TrimSpace(source) == "" {
+			return spec.RepositorySpec{}, fmt.Errorf("repository source is required")
+		}
+		return spec.RepositorySpec{Source: source}, nil
+	}
+
+	if len(def.Repositories) == 0 {
+		return spec.RepositorySpec{}, fmt.Errorf("spec does not define any repositories")
+	}
+	if strings.TrimSpace(source) == "" {
+		return def.Repositories[0], nil
+	}
+
+	for _, repo := range def.Repositories {
+		if repo.Source == source {
+			return repo, nil
+		}
+	}
+
+	return spec.RepositorySpec{}, fmt.Errorf("repository source %q was not found in spec", source)
+}
+
+func resolveRecoveryDownloader(runtime *app.RecoveryRuntime, source string) (app.RecoveryDownloader, error) {
+	parts := strings.Split(source, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repository source %q", source)
+	}
+	if parts[0] != "s3" {
+		return nil, fmt.Errorf("unsupported repository source %q", source)
+	}
+
+	repo := runtime.Repositories[parts[1]]
+	if repo == nil {
+		return nil, fmt.Errorf("repository source connection %q does not exist", parts[1])
+	}
+
+	return repo, nil
+}
+
+func resolveRecoveryRemoteKey(repository spec.RepositorySpec, backup string) string {
+	if repository.Dest == "" {
+		return backup
+	}
+	if strings.Contains(backup, "/") || strings.Contains(backup, "\\") {
+		return filepath.ToSlash(backup)
+	}
+	return filepath.ToSlash(filepath.Join(repository.Dest, backup))
 }
 
 func resolveSpecPath(baseDir, specArg string) (string, error) {
