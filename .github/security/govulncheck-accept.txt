@@ -1,0 +1,31 @@
+# Govulncheck accepted advisories
+#
+# One Go vulnerability ID per line. Blank lines and lines starting with '#'
+# are ignored. Every entry here MUST satisfy ALL of the following:
+#
+#   1. The advisory has no fixed version upstream ("Fixed in: N/A").
+#   2. goback does not exercise the vulnerable code path in a way that is
+#      exploitable (e.g. server-side daemon bugs reached only through the
+#      Docker client SDK, where goback is the client).
+#   3. There is an entry in the companion .trivyignore.yaml for the matching
+#      CVE so both SAST/dependency scanners stay in sync.
+#
+# This list is reviewed on every dependency bump. Entries are removed as soon
+# as the upstream project ships a fix.
+#
+# Last reviewed: 2026-07-18
+
+# CVE-2026-41567 - docker/docker: PUT /containers/{id}/archive RCE (daemon-side)
+GO-2026-5746
+
+# CVE-2026-41568 - docker/docker: docker cp symlink swap (daemon-side)
+GO-2026-5668
+
+# CVE-2026-42306 - docker/docker: docker cp bind-mount redirection (daemon-side)
+GO-2026-5617
+
+# CVE-2026-34040 - Moby AuthZ plugin bypass (daemon-side, requires AuthZ plugin)
+GO-2026-4887
+
+# CVE-2026-33997 - Moby plugin privilege off-by-one (daemon-side)
+GO-2026-4883

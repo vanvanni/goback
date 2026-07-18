@@ -42,8 +42,11 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Run govulncheck
-        run: govulncheck ./...
+      - name: Run govulncheck gate
+        shell: bash
+        run: |
+          chmod +x .github/security/gate-govulncheck.sh
+          ./.github/security/gate-govulncheck.sh
 
   gosec:
     name: Gosec (SAST)
@@ -75,14 +78,14 @@ jobs:
 
       - name: Upload gosec SARIF
         if: ${{ always() && hashFiles('gosec.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gosec.sarif
           category: gosec
 
       - name: Upload gosec SARIF artifact
         if: ${{ always() && hashFiles('gosec.sarif') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gosec-sarif
           path: gosec.sarif
@@ -105,12 +108,13 @@ jobs:
         run: |
           docker run --rm \
             -v "${PWD}:/src" \
-            aquasec/trivy:0.69.1 \
+            aquasec/trivy:0.72.0 \
             fs \
             --scanners vuln \
             --vuln-type os,library \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
+            --ignorefile /src/.github/security/.trivyignore.yaml \
             --no-progress \
             --format sarif \
             --output /src/trivy.sarif \
@@ -118,14 +122,14 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: ${{ always() && hashFiles('trivy.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy.sarif
           category: trivy-fs
 
       - name: Upload Trivy SARIF artifact
         if: ${{ always() && hashFiles('trivy.sarif') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: trivy-sarif
           path: trivy.sarif
@@ -135,12 +139,13 @@ jobs:
         run: |
           docker run --rm \
             -v "${PWD}:/src" \
-            aquasec/trivy:0.69.1 \
+            aquasec/trivy:0.72.0 \
             fs \
             --scanners vuln \
             --vuln-type os,library \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
+            --ignorefile /src/.github/security/.trivyignore.yaml \
             --no-progress \
             --exit-code 1 \
             /src

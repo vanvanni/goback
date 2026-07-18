@@ -1,0 +1,19 @@
+# Trivy suppression policy
+#
+# Pairs with govulncheck-accept.txt. Every entry here MUST have a matching
+# GO-#### entry in govulncheck-accept.txt and must reference an advisory that
+# has no fixed version available upstream AND is not exploitable through
+# goback's usage of the affected module.
+#
+# Reviewed: 2026-07-18
+vulnerabilities:
+  # GO-2026-5746 - docker/docker: PUT /containers/{id}/archive RCE (daemon-side).
+  - id: CVE-2026-41567
+  # GO-2026-5668 - docker/docker: docker cp symlink swap (daemon-side).
+  - id: CVE-2026-41568
+  # GO-2026-5617 - docker/docker: docker cp bind-mount redirection (daemon-side).
+  - id: CVE-2026-42306
+  # GO-2026-4887 - Moby AuthZ plugin bypass (daemon-side, requires AuthZ plugin).
+  - id: CVE-2026-34040
+  # GO-2026-4883 - Moby plugin privilege off-by-one (daemon-side).
+  - id: CVE-2026-33997
