@@ -12,7 +12,6 @@ require (
 	github.com/google/safeopen v0.0.0-20240125081138-66b54d5181c6
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.2
-	github.com/walle/targz v0.0.0-20140417120357-57fe4206da5a
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
 	golang.org/x/crypto v0.54.0
 )

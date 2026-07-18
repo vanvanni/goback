@@ -14,7 +14,6 @@ import (
 	"github.com/vanvanni/goback/internal/helper"
 	"github.com/vanvanni/goback/internal/logging"
 	"github.com/vanvanni/goback/internal/spec"
-	"github.com/walle/targz"
 )
 
 type BackupTask struct {
@@ -167,7 +166,7 @@ func (bt *BackupTask) Run(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to write backup manifest: %w", err)
 	}
 
-	if err := targz.Compress(workDir, finalArchive); err != nil {
+	if err := helper.CompressDir(workDir, finalArchive); err != nil {
 		return "", fmt.Errorf("failed to create final archive: %w", err)
 	}
 
